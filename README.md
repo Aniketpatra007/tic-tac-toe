@@ -28,9 +28,9 @@ A real-time, room-based multiplayer Tic-Tac-Toe web app built with plain HTML, C
 2. In your project, open Build > Realtime Database.
 3. Create database (for testing, start in test mode).
 4. Project Settings > General > Your Apps > Web App.
-5. Copy Firebase config and paste into `app.js` replacing placeholder values.
+5. Copy `config.example.js` to `config.js` and paste your Firebase config into `config.js`.
 
-Inside app.js, update:
+Inside config.js, update:
 
 ```js
 const firebaseConfig = {
