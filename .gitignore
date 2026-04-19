@@ -1,0 +1,17 @@
+# Firebase Configuration
+config.js
+
+# Node modules (if using npm in future)
+node_modules/
+package-lock.json
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
