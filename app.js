@@ -587,7 +587,7 @@ async function joinRoom(roomIdRaw, modeHint = null) {
 }
 
 async function makeMove(cellIndex) {
-  await mutateRoom(state.roomId, (roomData) => {
+  const result = await mutateRoom(state.roomId, (roomData) => {
     if (!roomData) return roomData;
 
     const localPlayer = roomData.players?.[state.localPlayerId];
@@ -633,10 +633,15 @@ async function makeMove(cellIndex) {
 
     return roomData;
   });
+
+  // For local mode, immediately render the updated room to sync in the same tab
+  if (state.backendMode === "local" && result.committed && result.snapshot) {
+    renderRoom(result.snapshot);
+  }
 }
 
 async function restartRound() {
-  await mutateRoom(state.roomId, (roomData) => {
+  const result = await mutateRoom(state.roomId, (roomData) => {
     if (!roomData) return roomData;
     if (roomData.status !== "playing") return roomData;
 
@@ -651,6 +656,11 @@ async function restartRound() {
 
     return roomData;
   });
+
+  // For local mode, immediately render the updated room to sync in the same tab
+  if (state.backendMode === "local" && result.committed && result.snapshot) {
+    renderRoom(result.snapshot);
+  }
 }
 
 async function leaveRoom() {
