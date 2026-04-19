@@ -21,6 +21,8 @@ A real-time, room-based multiplayer Tic-Tac-Toe web app built with plain HTML, C
 - index.html
 - style.css
 - app.js
+- config.example.js
+- config.js (local only, gitignored)
 
 ## 1) Firebase Setup
 
@@ -97,7 +99,14 @@ This is a static app, so deployment is direct.
 After deployment:
 
 - Ensure Firebase Realtime Database rules allow your deployed domain flow.
-- Keep Firebase config in app.js updated for the correct project.
+- Keep Firebase config in your local `config.js` for development only.
+
+## Security
+
+- Never commit real credentials to git.
+- Keep real Firebase values only in local `config.js` (already gitignored).
+- Rotate/revoke any key immediately if it was ever committed.
+- This repo runs Gitleaks in GitHub Actions on push and pull requests.
 
 ## Notes
 

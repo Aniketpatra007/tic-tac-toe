@@ -1,5 +1,15 @@
 # Firebase Configuration
 config.js
+.env
+.env.*
+!.env.example
+
+# Common secret artifacts
+*.pem
+*.p12
+*.key
+*.crt
+*.pfx
 
 # Node modules (if using npm in future)
 node_modules/
