@@ -24,8 +24,9 @@ const PLAYER_STORAGE_PREFIX = "ttt_player_";
 const LOCAL_ROOM_PREFIX = "ttt_room_";
 const LOCAL_BROADCAST_CHANNEL = "ttt_room_updates";
 
-const app = initializeApp(firebaseConfig);
-const db = getDatabase(app);
+let app = null;
+let db = null;
+let firebaseAvailable = false;
 
 const state = {
   roomId: null,
@@ -67,6 +68,40 @@ function isFirebaseConfigured() {
   );
 }
 
+function isFirebaseReady() {
+  return firebaseAvailable && Boolean(db);
+}
+
+function initFirebase() {
+  if (!isFirebaseConfigured()) {
+    firebaseAvailable = false;
+    return;
+  }
+
+  try {
+    app = initializeApp(firebaseConfig);
+    db = getDatabase(app);
+    firebaseAvailable = true;
+  } catch (error) {
+    console.error("Firebase initialization failed:", error);
+    firebaseAvailable = false;
+    app = null;
+    db = null;
+  }
+}
+
+function getFirebaseSetupIssue() {
+  if (!isFirebaseConfigured()) {
+    return "Firebase is not configured. Add real values in config.js.";
+  }
+
+  if (!isFirebaseReady()) {
+    return "Firebase failed to initialize. Check config.js values and reload.";
+  }
+
+  return "";
+}
+
 function showLobby(message = "") {
   ui.lobbySection.classList.add("active");
   ui.gameSection.classList.remove("active");
@@ -106,10 +141,16 @@ function resolveBackendMode(roomId, modeHint = null) {
 }
 
 function getRoomRef(roomId) {
+  if (!db) {
+    throw new Error("Firebase database is not initialized.");
+  }
   return ref(db, `rooms/${roomId}`);
 }
 
 function getPresenceRef(roomId, playerId) {
+  if (!db) {
+    throw new Error("Firebase database is not initialized.");
+  }
   return ref(db, `rooms/${roomId}/presence/${playerId}`);
 }
 
@@ -440,7 +481,7 @@ async function mutateRoom(roomId, mutator, mode = state.backendMode) {
 
 async function createRoom() {
   const localName = sanitizeName(ui.playerNameInput.value);
-  const roomMode = state.backendMode;
+  const roomMode = isFirebaseReady() ? "firebase" : "local";
   const roomId = makeRoomId(roomMode);
   const playerId = makePlayerId();
 
@@ -480,7 +521,7 @@ async function joinRoom(roomIdRaw, modeHint = null) {
     : [preferredMode, fallbackMode];
 
   for (const joinMode of modesToTry) {
-    if (joinMode === "firebase" && !isFirebaseConfigured()) {
+    if (joinMode === "firebase" && !isFirebaseReady()) {
       continue;
     }
 
@@ -565,9 +606,14 @@ async function joinRoom(roomIdRaw, modeHint = null) {
     return;
   }
 
-  if (!isFirebaseConfigured() && preferredMode === "firebase") {
+  if (!isFirebaseReady() && preferredMode === "firebase") {
+    showLobby(getFirebaseSetupIssue());
+    return;
+  }
+
+  if (preferredMode === "local") {
     showLobby(
-      "This room appears to use Firebase, but Firebase config is not set.",
+      "Room not found in this browser profile. Local Mode rooms only work in the same browser profile/tab set as the creator. Configure Firebase in config.js to join across different browsers.",
     );
     return;
   }
@@ -703,17 +749,36 @@ function copyRoomLink() {
 }
 
 function setupEvents() {
+  const getActionErrorMessage = (error, fallbackMessage) => {
+    const code = String(error?.code || "").toLowerCase();
+    const message = String(error?.message || "").toLowerCase();
+
+    if (code.includes("permission") || message.includes("permission_denied")) {
+      return "Firebase permission denied. In Realtime Database rules, allow .read/.write on rooms/$roomId for this app.";
+    }
+
+    if (code.includes("network") || message.includes("network")) {
+      return "Network issue while contacting Firebase. Check internet and retry.";
+    }
+
+    if (code.includes("unavailable") || message.includes("unavailable")) {
+      return "Firebase is currently unavailable. Please retry in a moment.";
+    }
+
+    return fallbackMessage;
+  };
+
   ui.createRoomBtn.addEventListener("click", () => {
     createRoom().catch((error) => {
       console.error(error);
-      showLobby("Failed to create room.");
+      showLobby(getActionErrorMessage(error, "Failed to create room."));
     });
   });
 
   ui.joinRoomBtn.addEventListener("click", () => {
     joinRoom(ui.roomIdInput.value).catch((error) => {
       console.error(error);
-      showLobby("Failed to join room.");
+      showLobby(getActionErrorMessage(error, "Failed to join room."));
     });
   });
 
@@ -767,7 +832,9 @@ async function restoreRoomFromUrl() {
 }
 
 function initMode() {
-  if (!isFirebaseConfigured()) {
+  initFirebase();
+
+  if (!isFirebaseReady()) {
     state.backendMode = "local";
   }
 
@@ -777,7 +844,7 @@ function initMode() {
 
   if (state.backendMode === "local") {
     showLobby(
-      "Local Mode active (Firebase not configured). Create Room to generate code.",
+      `${getFirebaseSetupIssue() || "Firebase unavailable."} Local Mode is active. Local rooms work only in the same browser profile. Configure Firebase in config.js for cross-device multiplayer.`,
     );
   }
 }

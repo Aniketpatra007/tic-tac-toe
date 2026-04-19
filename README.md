@@ -114,3 +114,10 @@ After deployment:
 - Filled cells cannot be overwritten.
 - Refreshing a page keeps the board state from database.
 - Leaving a room resets round state if one player remains.
+
+## Troubleshooting Cross-Device Join
+
+- If room code starts with `L`, it is a Local Mode room and only works in the same browser profile.
+- For cross-device play, ensure room code starts with `F`.
+- If you see Firebase permission errors, verify Realtime Database rules allow read/write at `rooms/$roomId`.
+- Ensure `config.js` has real Firebase values (not `YOUR_*` placeholders), then hard refresh both devices.
